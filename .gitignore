@@ -132,3 +132,6 @@ dist
 # Extra
 *script*.js
 uploads
+# dependencies
+/bilal_ssh_key
+/bilal_ssh_key.pub
