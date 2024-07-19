@@ -1,0 +1,43 @@
+{
+  "name": "unes-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js",
+    "migrate:clear": "npx sequelize-cli db:migrate:undo:all",
+    "migrate": "npx sequelize-cli db:migrate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@mailchimp/mailchimp_transactional": "^1.0.59",
+    "aws-sdk": "^2.1642.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "groq-sdk": "^0.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.10.0",
+    "node-cron": "^3.0.3",
+    "node-schedule": "^2.1.1",
+    "nodemailer": "^6.9.13",
+    "nodemon": "^3.1.2",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
+    "passport-instagram": "^1.0.0",
+    "sequelize": "^6.37.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "sequelize-cli": "^6.6.2"
+  }
+}
