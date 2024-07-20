@@ -11,8 +11,9 @@ const constants = {
     ACTIVE: "active",
     DRAFT: "draft",
     SCHEDULED: "scheduled",
-    SCHEDULED: "faild",
+    FAILED: "failed",  // Corrected typo here
   },
+
   USER_ROLES: {
     PERSONAL: "personal",
     STUDENT: "student",

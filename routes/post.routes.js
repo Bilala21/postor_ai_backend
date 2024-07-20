@@ -6,6 +6,7 @@ const upload = require("../middlewares/multer");
 router.post("/", upload.array("media", 3), controller.createPosts);
 router.post("/caption", controller.generateCaption);
 router.get("/scheduled", controller.schedulePostFilter);
+router.get("/top-rated", controller.getRecentToRatedPosts);
 router.get("/:id", controller.getPost);
 router.get("/", controller.getPosts);
 

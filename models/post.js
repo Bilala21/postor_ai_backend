@@ -10,6 +10,11 @@ module.exports = (sequelize) => {
         foreignKey: "post_id",
         as: "post_platforms",
       });
+      
+      Post.hasMany(models.Like, { foreignKey: "post_id", as: "likes" });
+      Post.hasMany(models.Share, { foreignKey: "post_id", as: "shares" });
+      Post.hasMany(models.Comment, { foreignKey: "post_id", as: "comments" });
+      Post.hasMany(models.Rating, { foreignKey: "post_id", as: "ratings" });
     }
   }
 

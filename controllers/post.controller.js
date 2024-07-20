@@ -1,13 +1,14 @@
-const { Op } = require("sequelize");
+const { Op, literal, fn, col } = require("sequelize");
 const schedule = require("node-schedule");
 const { GROQ_API_KEY } = require("../utils/constants");
-const { Post, PostMedia, User, sequelize, PostPlatform } = require("../models");
+const { Post, PostMedia, User, sequelize, PostPlatform, Like, Share, Comment, Rating } = require("../models");
 const {
   postToSocialMedia,
   uploadPostToPlatform,
 } = require("../services/social-media-service");
 const { api, parallel, uploadFileToS3 } = require("../utils/helpers");
 const { default: Groq } = require("groq-sdk");
+const like = require("../models/like");
 
 const groq = new Groq({ apiKey: GROQ_API_KEY });
 
@@ -73,6 +74,8 @@ async function createPostInTransaction(data, files) {
   }
 }
 
+
+
 module.exports = {
   createPost: async (req, res) => {
     try {
@@ -137,15 +140,84 @@ module.exports = {
   },
 
   getPosts: (req, res) => api(res, async () => {
+    const month = req.query.month;
+    const whereCondition = month ?
+      sequelize.where(sequelize.fn('MONTH', sequelize.col('Post.created_at')), month) :
+      {};
+
     const posts = await Post.findAll({
+      where: whereCondition,
       include: [{
         model: PostMedia,
         as: 'media',
         required: false,
       }],
     });
+
     return res.json({ success: true, statusCode: 200, data: posts });
   }),
+
+
+  getRecentToRatedPosts: async (req, res) => {
+    const query = `
+   SELECT 
+    posts.id,
+    posts.title,
+    COALESCE(SUM(like_counts.like_count), 0) AS like_count,
+    COALESCE(SUM(share_counts.share_count), 0) AS share_count,
+    COALESCE(SUM(comment_counts.comment_count), 0) AS comments_count,
+    COALESCE(MAX(ratings.rating), 0) AS rating,
+    -- Retrieve a single media URL for each post, e.g., the first one (based on order or criteria)
+    MAX(post_medias.media_url) AS media_url,
+    COALESCE(COUNT(DISTINCT post_medias.id), 0) AS media_count,
+    (COALESCE(SUM(like_counts.like_count), 0) + 
+     COALESCE(SUM(share_counts.share_count), 0) + 
+     COALESCE(SUM(comment_counts.comment_count), 0)) AS total_score,
+    -- Format the percentage to 2 decimal places
+    CASE 
+        WHEN (COALESCE(SUM(like_counts.like_count), 0) + 
+              COALESCE(SUM(share_counts.share_count), 0) + 
+              COALESCE(SUM(comment_counts.comment_count), 0)) > 0
+        THEN FORMAT((COALESCE(MAX(ratings.rating), 0) / 
+                     (COALESCE(SUM(like_counts.like_count), 0) + 
+                      COALESCE(SUM(share_counts.share_count), 0) + 
+                      COALESCE(SUM(comment_counts.comment_count), 0))) * 100, 2)
+        ELSE '0.00'
+    END AS rating_percentage
+FROM posts
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS like_count
+    FROM likes
+    WHERE user_id = ${req.user.id}
+    GROUP BY post_id
+) AS like_counts ON posts.id = like_counts.post_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS share_count
+    FROM shares
+    WHERE user_id = ${req.user.id}
+    GROUP BY post_id
+) AS share_counts ON posts.id = share_counts.post_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS comment_count
+    FROM comments
+    WHERE user_id = ${req.user.id}
+    GROUP BY post_id
+) AS comment_counts ON posts.id = comment_counts.post_id
+LEFT JOIN ratings ON posts.id = ratings.post_id
+LEFT JOIN post_medias ON posts.id = post_medias.post_id
+GROUP BY posts.id, posts.title
+HAVING 
+    COALESCE(SUM(like_counts.like_count), 0) > 0 AND 
+    COALESCE(SUM(share_counts.share_count), 0) > 0 AND 
+    COALESCE(SUM(comment_counts.comment_count), 0) > 0
+ORDER BY total_score DESC
+LIMIT 4;
+`;
+    const topPosts = await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    return res.status(200).json({ success: true, data: topPosts });
+  },
 
   getPost: (req, res) => api(res, async () => {
     const post = await Post.findOne({
